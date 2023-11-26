@@ -1,19 +1,21 @@
 class LineShape {
-  constructor(points, settings = {}) {
+  constructor(points, objSettings = {}, center = [], preview = true) {
     this.points = points;
     this.settings = Object.assign({
       display: true,
       smooth: false,
       tension: 0.35,
-      edgeColor: "black", // console.log(objects[objects.push(new LineShape([[100,100],[100,300],[300,300],[300,100]], drawingMode)) - 1]); render(false);
+      edgeColor: "black", // console.log(objects[objects.push(new LineShape([[100,100],[100,300],[300,300],[300,100]], settings.Paint)) - 1]); render(false);
       edgeWidth: 2,
       closed: false,
       filled: false,
       fillColor: "black"
-    }, settings);
-    this.center = [0, 0];
-    this.resetCenter();
-    previewRender(this);
+    }, objSettings);
+    if (center.length === 2) {this.center = center} else {
+      this.center = [0, 0];
+      this.resetCenter();
+    }
+    if (!preview) {previewRender(this);};
   }
   changeSettings(newSettings = {}) {
     Object.assign(this.settings, newSettings);  // objects[0].changeSettings({closed:true,filled:true,fillColor:"brown"});
@@ -24,8 +26,8 @@ class LineShape {
       pb.beginPath();
       pb.strokeStyle = this.settings.edgeColor;
       pb.lineWidth = this.settings.edgeWidth;
-      if (this.settings.smooth  &&  !isPreview) {
-        let controls = generateSplineControlPoints(this.points, this.settings.tension);
+      if (this.settings.smooth  &&  !isPreview  &&  this.points.length > 1) {
+        let controls = generateSplineControlPoints(this.points, this.settings.tension, this.settings.closed);
         pb.moveTo(this.points[0][0] + this.center[0], this.points[0][1] + this.center[1]);
         for (let i = 1; i < this.points.length; i++) {
              //console.log(...controls[2 * i - 1].map((e, i) => e + this.center[i%2]), ...controls[2 * i].map((e, i) => e + this.center[i%2]), ...this.points[i].map((e, i) => e + this.center[i%2]));
@@ -49,6 +51,12 @@ class LineShape {
         pb.fill();
       }
       if (this.settings.edgeWidth) {
+        pb.stroke();
+     pb.moveTo(this.points[0][0] + this.center[0], this.points[0][1] + this.center[1]);
+        pb.arc(this.points[0][0] + this.center[0], this.points[0][1] + this.center[1], this.settings.edgeWidth / 4, 0, 2 * Math.PI);
+     pb.moveTo(this.points[this.points.length - 1][0] + this.center[0], this.points[this.points.length - 1][1] + this.center[1]);
+        pb.arc(this.points[this.points.length - 1][0] + this.center[0], this.points[this.points.length - 1][1] + this.center[1], this.settings.edgeWidth / 4, 0, 2 * Math.PI);
+        pb.lineWidth /= 2;
         pb.stroke();
       }
       pb.closePath();
@@ -104,6 +112,15 @@ class LineShape {
     }
     previewRender(this);
   }
+  stretch(xFactor, yFactor) {
+    for (let i = 0; i < this.points.length; i++) {
+      this.points[i][0] *= xFactor;
+      this.points[i][1] *= yFactor;
+    }
+  }
+  stretchX(xFactor) {this.stretch(xFactor, 1);}
+  stretchY(yFactor) {this.stretch(1, yFactor);}
+  scale(factor) {this.stretch(factor, factor);}
   getBoundingBox(localOrGlobal, valuesOrPoints = "values") {
     if (this.points.length === 1) {
       return (valuesOrPoints == "values"?
@@ -153,19 +170,21 @@ class LineShape {
   }
 }
 
-function generateSplineControlPoints(points, tension) {
+function generateSplineControlPoints(points, tension, closed = false) {
   let controlPoints = [];
   for (let i = 0; i < points.length; i++) {
-    let x0 = i !== 0? points[i - 1][0] : points[points.length - 1][0], 
-        y0 = i !== 0? points[i - 1][1] : points[points.length - 1][1], 
+    const startCap = closed? points[points.length - 1] : [2 * points[0][0] - points[1][0], 2 * points[0][1] - points[1][1]];
+    const endCap = closed? points[0] : [2 * points[points.length - 1][0] - points[points.length - 2][0], 2 * points[points.length - 1][1] - points[points.length - 2][1]];
+    const x0 = i !== 0? points[i - 1][0] : startCap[0], 
+        y0 = i !== 0? points[i - 1][1] : startCap[1], 
         x1 = points[i][0], 
         y1 = points[i][1], 
-        x2 = i !== points.length - 1? points[i + 1][0] : points[0][0], 
-        y2 = i !== points.length - 1? points[i + 1][1] : points[0][1];
-    let angle = Math.atan2(y2 - y0, x2 - x0);
-    let projected = projectPointToLine(points[i - 1]  ||  points[points.length - 1], points[i + 1]  ||  points[0], points[i]);
-    let v0 = [tension * (x0 - projected[0]), tension * (y0 - projected[1])];
-    let v1 = [tension * (x2 - projected[0]), tension * (y2 - projected[1])];
+        x2 = i !== points.length - 1? points[i + 1][0] : endCap[0], 
+        y2 = i !== points.length - 1? points[i + 1][1] : endCap[1];
+    const angle = Math.atan2(y2 - y0, x2 - x0);
+    const projected = projectPointToLine(points[i - 1]  ||  startCap, points[i + 1]  ||  endCap, points[i]);
+    const v0 = [tension * (x0 - projected[0]), tension * (y0 - projected[1])];
+    const v1 = [tension * (x2 - projected[0]), tension * (y2 - projected[1])];
     controlPoints.push([x1 + v0[0], y1 + v0[1]], [x1 + v1[0], y1 + v1[1]]);
   }
   return controlPoints;

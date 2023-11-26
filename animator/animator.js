@@ -1,8 +1,6 @@
-const inputs = document.querySelector("#inputs"); // not used yet
 const wrapper = document.querySelector(".wrapper");
 const display = document.querySelector("#display");
 const preview = document.querySelector("#preview");
-const inputRenderer = inputs.getContext("2d");
 const pbTop = preview.getContext("2d");
 const pbBottom = display.getContext("2d");
 
@@ -33,18 +31,18 @@ let lastPos = [];
 let lastTime;
 
 let drawing = false;
-let drawingMode = {smooth: true, closed: true};
 
 ["mousemove", "touchmove"].forEach(qwerty => window.addEventListener(qwerty, (e) => {
   let x = e.clientX - wrapper.offsetLeft;
   let y = e.clientY - wrapper.offsetTop;
   if (x < 0  ||  x > preview.width  ||  y < 0  ||  y > preview.height) {
+    if (drawing) {objects[objects.length - 1].addPoint([x, y]);}
     drawing = false;
     lastPos = [];
-  } else if ((drawing  &&  (Date.now() - lastTime > 20  ||  lastPos.length === 0  ||  Math.abs(x - lastPos[0]) > 2  ||  Math.abs(y - lastPos[1]) > 2))) {
+  } else if (drawing  &&  (Date.now() - lastTime > 20  ||  lastPos.length === 0  ||  Math.abs(x - lastPos[0]) > 2  ||  Math.abs(y - lastPos[1]) > 2)) {
     lastPos = [x, y];
     lastTime = Date.now();
-    objects[objects.length - 1].addPoint([x,y]);
+    objects[objects.length - 1].addPoint([x, y]);
     // objects[objects.length - 1].draw();
   }
 }));
@@ -53,7 +51,7 @@ let drawingMode = {smooth: true, closed: true};
   drawing = true;
   lastPos = [e.offsetX, e.offsetY];
   lastTime = Date.now();
-  console.log(objects[objects.push(new LineShape([[e.offsetX, e.offsetY]], drawingMode)) - 1]);
+  console.log(objects[objects.push(new LineShape([[e.offsetX, e.offsetY]], settings.Paint)) - 1]);
 }));
 
 ["mouseup", "touchup"].forEach(qwerty => window.addEventListener(qwerty, () => {

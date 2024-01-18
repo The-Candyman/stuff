@@ -33,6 +33,7 @@ let lastTime;
 let drawing = false;
 
 ["mousemove", "touchmove"].forEach(qwerty => window.addEventListener(qwerty, (e) => {
+  e.preventDefault();
   let x = e.clientX - wrapper.offsetLeft;
   let y = e.clientY - wrapper.offsetTop;
   if (x < 0  ||  x > preview.width  ||  y < 0  ||  y > preview.height) {
@@ -48,6 +49,7 @@ let drawing = false;
 }));
 
 ["mousedown", "touchdown"].forEach(qwerty => wrapper.addEventListener(qwerty, (e) => {
+  e.preventDefault();
   drawing = true;
   lastPos = [e.offsetX, e.offsetY];
   lastTime = Date.now();

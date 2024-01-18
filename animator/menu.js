@@ -3,17 +3,16 @@ const pb = menu.getContext("2d");
 
 var selected;
 
-var settings = {
+var settings = { // _ means a space, __ means a newline, $ means extra information
   Paint: {
     display: true,
     smooth: true,
-    tension: 0.35,
+    tension$if_1: 0.35,
     edgeWidth: 2,
     edgeColor: "black",
-    edgeWidth: 2,
     closed: false,
     filled: false,
-    fillColor: "black"
+    fillColor$if_7: "black"
   },
   Shape: {
     Polygon: {
@@ -36,8 +35,8 @@ var settings = {
       Manual__Input: {
         center: {
           auto: true,
-          x: 0,
-          y: 0
+          x$if_0: 0,
+          y$if_0: 0
         },
         closed: false,
         index: 0
@@ -47,12 +46,13 @@ var settings = {
         closed: false,
         snap__settings: {
           snap_to__points: false,
+          from__distance$if_0: 10,
           snap_to__distance: false,
-          from__distance: 10,
+          from__distance$if_2: 10,
           snap_to__angle: false,
-          snap_angle__symmetry: 8,
-          from__angle: 3,
-          minimum__distance: 30
+          snap_angle__symmetry$if_4: 8,
+          from__angle$if_4: 3,
+          minimum__distance$if_4: 30
         }
       }
     }
@@ -63,20 +63,20 @@ var settings = {
       Change__Settings: {
         display: true,
         smooth: true,
-        tension: 0.35,
+        tension$if_1: 0.35,
         edgeWidth: 2,
         edgeColor: "black",
         edgeWidth: 2,
         closed: false,
         filled: false,
-        fillColor: "black"
+        fillColor$if_7: "black"
       },
       Manipulate: {
         addPoint: {x: 0, y: 0},
         insertPoint: {index: 0, x: 0, y: 0},
         deletePoint: {index: 0},
         splicePoints: {index: 0, del: 0, points: [[0, 0]]},
-        setCenter: {newCenter: [0, 0]},
+        setCenter: {x: 0, y: 0},
         resetCenter: {},
         setPosition: {x: 0, y: 0},
         translate: {x: 0, y: 0},
@@ -110,7 +110,8 @@ a.splicePoints.run = function() {selected.splicePoints(
   a.splicePoints.del,
   a.splicePoints.points);};
 a.setCenter.run = function() {selected.setCenter(
-  a.setCenter.newCenter);};
+  [a.setCenter.x,
+  a.setCenter.y]);};
 a.resetCenter.run = function() {selected.resetCenter();};
 a.setPosition.run = function() {selected.setPosition(
   a.setPosition.x,
@@ -137,17 +138,6 @@ console.log(settings);
 
 var path = [0];
 
-function followNestedPath(s, layers, thisPath) {
-  for (let i = 0; i < layers; i++) {
-    s = s[Object.keys(s)[thisPath[i]]];
-  }
-  return s;
-}
-
-function getNestedLength(s, layers, thisPath) {
-  return Object.keys(followNestedPath(s, layers, thisPath)).length;
-}
-
 function drawMenu() {
   pb.clearRect(0, 0, menu.width, menu.height);
   function drawObject(obj, layer) {
@@ -155,19 +145,29 @@ function drawMenu() {
     Object.entries(obj).forEach((e, i, a) => {
       const key = e[0];
       const value = e[1];
+      let flags = Array(1).fill(false); // gray out if false, 
+      let keyer = key.toString().split("$");
+      for (let i = 1; i < keyer.length; i++) {
+        let keit = keyer[i].split("_");
+        switch (keit[0]) {
+          case "if":
+            if (Object.values(obj)[Number(keit[1])]) {flags[0] = false;}
+            break;
+        }
+      }
       pb.beginPath();
       pb.rect(100 * layer, i * 400 / a.length, 100, 400 / a.length);
-      pb.fillStyle = i === path[layer]  &&  typeof value === "object"? "lightgray" : "gray";
+      pb.fillStyle = (i === path[layer]  &&  typeof value === "object")? "lightgray" : ("gray");
       pb.fill();
       pb.strokeStyle = "black";
       pb.lineWidth = 2;
       pb.stroke();
       pb.fillStyle = "black";
       pb.font = "20px arial";
-      let keyText = key.toString().split("__").map(f => f.split("_").join(" "));
+      let keyText = keyer[0].toString().split("__").map(f => f.split("_").join(" "));
       if (typeof value !== "function") {
         keyText.forEach((f, j, b) => {
-          pb.fillText(f, 100 * layer + 50 - Math.min(pb.measureText(f).width, 96) / 2, (i + 0.5) * 400 / a.length + 14 + 10 * (j - 0.7) * b.length, 96);
+          pb.fillText(f, 100 * layer + 50 - Math.min(pb.measureText(f).width, 96) / 2, (i + 0.5) * 400 / a.length + 17 + 20 * j - 10 * b.length, 96);
         });
       }
       pb.closePath();
@@ -198,6 +198,22 @@ function drawMenu() {
 }
 drawMenu();
 
+function followNestedPath(s, layers, thisPath) {
+  for (let i = 0; i < layers; i++) {
+    s = s[Object.keys(s)[thisPath[i]]];
+  }
+  return s;
+}
+
+function getNestedLength(s, layers, thisPath) {
+  s = followNestedPath(s, layers, thisPath);
+  if (typeof s === "object") {
+    return Object.keys(s).length;
+  } else if (typeof s !== "undefined") {
+    return -1;
+  } else return null;
+}
+
 let savePath = [];
 let saveColumnNum;
 let saveRowNum;
@@ -205,14 +221,15 @@ let saveRowNum;
 ["mousedown", "touchdown"].forEach(qwerty => menu.addEventListener(qwerty, (e) => {
   const columnNum = Math.floor(e.offsetX / 100);
   const rowNum = path[columnNum]; // change path[columnNum] to modify path itself, since rowNum just gets reassigned when changed
+  if (getNestedLength(settings, columnNum, path) === -1) {}
   const columnObj = followNestedPath(settings, columnNum, path);
-  const key = Object.keys(columnObj)[Math.floor(Object.keys(columnObj).length * e.offsetY / 400)];
+  const rowClicked = Math.floor(getNestedLength(settings, columnNum, path) * e.offsetY / 400);
+  const key = Object.keys(columnObj)[rowClicked];
   const val = columnObj[key]; // same as rowNum
   switch (typeof val) {
-    case "object": 
-      const rowClicked = Math.floor(getNestedLength(settings, columnNum, path) * e.offsetY / 400);
+    case "object":
       if (rowNum !== rowClicked) {
-        if (savePath.length !== 0  &&  columnNum === saveColumnNum  &&  rowNum === saveRowNum) {
+        if (savePath.length !== 0  &&  columnNum === saveColumnNum  &&  rowClicked === saveRowNum) {
           path = [...savePath];
           savePath = [];
         } else {
@@ -233,11 +250,17 @@ let saveRowNum;
       columnObj[key] = !val;
       break;
     case "number":
-      let testnum = Number(prompt("Enter a number"));
-      if (testnum.toString() !== "NaN") {columnObj[key] = testnum;}
+      let testnum = prompt("Enter a number");
+      if (testnum.length > 0) {
+        testnum = Number(testnum);
+        if (!Number.isNaN(testnum)) {
+          columnObj[key] = testnum;
+        }
+      }
       break;
     case "string" :
-      columnObj[key] = prompt("Enter the new setting");
+      let teststr = prompt("Enter the new setting");
+      if (teststr.length > 0) {columnObj[key] = teststr;}
       break;
   }
   drawMenu();

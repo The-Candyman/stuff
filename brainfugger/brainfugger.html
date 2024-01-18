@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Command line thingy</title>
+    <style>
+      * {
+        font-family: monospace;
+      }
+      #input {
+        display: inline-block;
+        border: 1px solid grey;
+        min-width: 100px;
+        min-height: 15px;
+      }
+      .largeTextBox {
+        width: 610px;
+        height: 370px;
+        resize: none;
+      }
+    </style>
+  </head>
+  <body>
+    <textarea id="log" class="largeTextBox" readonly></textarea>
+    <hr>
+    >> <span id="input" contenteditable="true" innerHTML=" "> </span>
+    <hr>
+    <button id="submitText" class="textEditor" style="display: none;">submit</button>
+    <br>
+    <textarea id="textEditor" class="largeTextBox textEditor" style="display: none;"></textarea>
+    <!--<button onmouseup=''>button</button>-->
+
+    <script src="js.js"></script>
+  </body>
+</html>
